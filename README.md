@@ -15,7 +15,7 @@ The goal of this project is to develop an object detection system in C++ using O
 1. Clone the repository:
 
 ```bash
-   git clone https://github.com/yourusername/object-detect-cv25.git
+   git clone https://github.com/antoniooodev/object-detect-cv25.git
    cd object-detect-cv25
 ```
 
