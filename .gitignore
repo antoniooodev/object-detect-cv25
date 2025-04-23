@@ -1,0 +1,18 @@
+# Ignore build directories
+/build/
+
+# Ignore OpenCV files
+*.o
+*.a
+*.so
+*.dll
+*.lib
+
+# Ignore IDE files
+/.idea/
+/.vscode/
+
+# Ignore temporary files
+*.swp
+*.bak
+*.tmp
