@@ -14,8 +14,10 @@ The goal of this project is to develop an object detection system in C++ using O
 
 1. Clone the repository:
 
-   git clone https://github.com/yourusername/object-detect-cv25.git
+```bash
+   git clone https://github.com/antoniooodev/object-detect-cv25.git
    cd object-detect-cv25
+```
 
 2. Install the dependencies (OpenCV):
 
@@ -24,6 +26,7 @@ The goal of this project is to develop an object detection system in C++ using O
 
 3. Build the project using CMake:
 
+```bash
    mkdir build
 
    cd build
@@ -31,10 +34,13 @@ The goal of this project is to develop an object detection system in C++ using O
    cmake ..
 
    make
+```
 
-4. Run the program:
+5. Run the program:
 
+```bash
    ./object_detect
+```
 
 ## Project Structure
 
