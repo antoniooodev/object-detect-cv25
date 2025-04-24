@@ -23,3 +23,16 @@ src/CMakeCache.txt
 src/cmake_install.cmake
 src/Makefile
 src/object-detect
+# CMake build artifacts
+src/CMakeFiles/
+src/CMakeCache.txt
+src/cmake_install.cmake
+src/Makefile
+src/object-detect
+
+# Root-level build files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+object-detect
