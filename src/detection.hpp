@@ -14,4 +14,4 @@ public:
     static cv::Mat computeDescriptors(const cv::Mat &image, std::vector<cv::KeyPoint> &keypoints);
 };
 
-#endif
+#endif // DETECTION_HPP
