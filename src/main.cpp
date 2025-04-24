@@ -1,44 +1,61 @@
 #include <opencv2/opencv.hpp>
+#include <filesystem>
 #include "preprocessing.hpp"
 #include "detection.hpp"
 
+namespace fs = std::__fs::filesystem;
+
 int main()
 {
-    // Load the image
-    cv::Mat img = Preprocessing::loadImage("../data/object_detection_dataset/004_sugar_box/test_images/4_0049_000003-color.jpg");
+    // Path to the dataset directory
+    std::string datasetPath = "../data/object_detection_dataset/004_sugar_box/test_images/";
+    std::string outputFolder = "results/";
 
-    if (img.empty())
+    // Create output directory if it doesn't exist
+    if (!fs::exists(outputFolder))
     {
-        std::cerr << "Error: Could not load image." << std::endl;
-        return -1;
+        fs::create_directory(outputFolder);
     }
 
-    // Preprocess the image (grayscale + resize)
-    cv::Mat processedImage = Preprocessing::preprocessImage(img);
+    // Loop through all image files in the dataset folder
+    for (const auto &entry : fs::directory_iterator(datasetPath))
+    {
+        if (entry.is_regular_file())
+        {
+            std::string imagePath = entry.path().string();
+            std::string imageName = entry.path().filename().string();
 
-    // Save the preprocessed image
-    cv::imwrite("processed_image.jpg", processedImage);
+            // Load the image
+            cv::Mat img = Preprocessing::loadImage(imagePath);
+            if (img.empty())
+            {
+                std::cerr << "Error: Could not load image: " << imagePath << std::endl;
+                continue;
+            }
 
-    // Detect keypoints using SIFT
-    std::vector<cv::KeyPoint> keypoints = Detection::detectKeypoints(processedImage);
+            // Preprocess the image (grayscale + resize)
+            cv::Mat processedImage = Preprocessing::preprocessImage(img);
 
-    // Compute descriptors for the keypoints
-    cv::Mat descriptors = Detection::computeDescriptors(processedImage, keypoints);
+            // Detect keypoints using SIFT
+            std::vector<cv::KeyPoint> keypoints = Detection::detectKeypoints(processedImage);
 
-    // Output the results
-    std::cout << "Detected keypoints: " << keypoints.size() << std::endl;
-    std::cout << "Descriptor matrix size: " << descriptors.rows << " x " << descriptors.cols << std::endl;
+            // Compute descriptors for the keypoints
+            cv::Mat descriptors = Detection::computeDescriptors(processedImage, keypoints);
 
-    // Draw keypoints on the image
-    cv::Mat outputImage;
-    cv::drawKeypoints(processedImage, keypoints, outputImage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+            // Output the results
+            std::cout << "Image: " << imageName << std::endl;
+            std::cout << "Detected keypoints: " << keypoints.size() << std::endl;
+            std::cout << "Descriptor matrix size: " << descriptors.rows << " x " << descriptors.cols << std::endl;
 
-    // Show the result
-    cv::imshow("SIFT Keypoints", outputImage);
-    cv::waitKey(0);
+            // Draw keypoints on the image
+            cv::Mat outputImage;
+            cv::drawKeypoints(processedImage, keypoints, outputImage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
 
-    // Save the result with keypoints drawn
-    cv::imwrite("sift_keypoints.jpg", outputImage);
+            // Save the result with keypoints drawn
+            std::string outputImagePath = outputFolder + "sift_" + imageName;
+            cv::imwrite(outputImagePath, outputImage);
+        }
+    }
 
     return 0;
 }
