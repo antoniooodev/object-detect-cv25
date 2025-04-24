@@ -2,58 +2,81 @@
 #include <filesystem>
 #include "preprocessing.hpp"
 #include "detection.hpp"
+#include "dataloader.hpp"
+#include "matching.hpp" 
 
-namespace fs = std::__fs::filesystem;
+namespace fs = std::filesystem;
 
 int main()
 {
-    // Path to the dataset directory
-    std::string datasetPath = "../data/object_detection_dataset/004_sugar_box/test_images/";
-    std::string outputFolder = "results/";
+    fs::path rootPath("../data/object_detection_dataset/");
 
-    // Create output directory if it doesn't exist
-    if (!fs::exists(outputFolder))
-    {
-        fs::create_directory(outputFolder);
+    FileSystemDataLoader loader;
+    auto code = loader.checkIntegrity(rootPath);
+    if (code != IntegrityCode::OK) {
+        std::cerr << "Dataset integrity error: " << static_cast<int>(code) << std::endl;
+        return static_cast<int>(code);
     }
 
-    // Loop through all image files in the dataset folder
-    for (const auto &entry : fs::directory_iterator(datasetPath))
-    {
-        if (entry.is_regular_file())
-        {
-            std::string imagePath = entry.path().string();
-            std::string imageName = entry.path().filename().string();
+    for (const auto &key : loader.listObjectKeys(rootPath)) {
+        std::cout << "Processing object: " << key << std::endl;
 
-            // Load the image
-            cv::Mat img = Preprocessing::loadImage(imagePath);
-            if (img.empty())
-            {
-                std::cerr << "Error: Could not load image: " << imagePath << std::endl;
+        // per-object results folder
+        fs::path outDir = fs::path("../data/results") / key;
+        if (!fs::exists(outDir)) {
+            fs::create_directories(outDir);
+        }
+
+        // 1) Extract & store all model‐view descriptors
+        auto modelViews = loader.loadModelViews(rootPath, key);
+        std::vector<cv::Mat> modelDescriptors;
+        std::vector<std::string> modelNames;
+        for (const auto &mv : modelViews) {
+            cv::Mat grayModel;
+            cv::cvtColor(mv.color, grayModel, cv::COLOR_BGR2GRAY);
+            auto kpModel = Detection::detectKeypoints(grayModel, mv.mask);
+            auto descModel = Detection::computeDescriptors(grayModel, kpModel);
+            modelDescriptors.push_back(descModel);
+            modelNames.push_back(mv.name);
+            std::cout << "  Model view '" << mv.name << "' keypoints: " << kpModel.size() << std::endl;
+        }
+
+
+        // 2) Test images (no masks)
+        auto testImages = loader.listTestImages(rootPath, key);
+        for (const auto &ti : testImages) {
+            cv::Mat timg = cv::imread(ti.path.string());
+            if (timg.empty()) {
+                std::cerr << "  Failed to read image: " << ti.name << std::endl;
                 continue;
             }
 
-            // Preprocess the image (grayscale + resize)
-            cv::Mat processedImage = Preprocessing::preprocessImage(img);
+            cv::Mat graytimg;
+            cv::cvtColor(timg, graytimg, cv::COLOR_BGR2GRAY);
+            cv::Mat processedTestImage = Preprocessing::reduceNoise(graytimg);
 
-            // Detect keypoints using SIFT
-            std::vector<cv::KeyPoint> keypoints = Detection::detectKeypoints(processedImage);
-
-            // Compute descriptors for the keypoints
-            cv::Mat descriptors = Detection::computeDescriptors(processedImage, keypoints);
-
+            auto kpTest   = Detection::detectKeypoints(processedTestImage);
+            auto descTest = Detection::computeDescriptors(processedTestImage, kpTest);
             // Output the results
-            std::cout << "Image: " << imageName << std::endl;
-            std::cout << "Detected keypoints: " << keypoints.size() << std::endl;
-            std::cout << "Descriptor matrix size: " << descriptors.rows << " x " << descriptors.cols << std::endl;
-
-            // Draw keypoints on the image
+            std::cout << "  Test image: " << ti.name << " - Keypoints: " << kpTest.size() << std::endl;
+            
+             // match against every model view
+             for (size_t m = 0; m < modelDescriptors.size(); ++m) {
+                auto goodMatches = Matching::matchDescriptors(modelDescriptors[m], descTest);
+                std::cout << "    Model View: " << modelNames[m]
+                          << "  Good Matches: " << goodMatches.size() << std::endl;
+            }
             cv::Mat outputImage;
-            cv::drawKeypoints(processedImage, keypoints, outputImage, cv::Scalar::all(-1), cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS);
+            cv::drawKeypoints(
+                processedTestImage,
+                kpTest,
+                outputImage,
+                cv::Scalar::all(-1),
+                cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS
+            );
 
-            // Save the result with keypoints drawn
-            std::string outputImagePath = outputFolder + "sift_" + imageName;
-            cv::imwrite(outputImagePath, outputImage);
+            fs::path savePath = outDir / ("sift_" + ti.name);
+            cv::imwrite(savePath.string(), outputImage);
         }
     }
 

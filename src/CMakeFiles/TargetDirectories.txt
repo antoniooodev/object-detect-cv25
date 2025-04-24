@@ -1,0 +1,3 @@
+/home/giuseppe/Scrivania/lab_cv/object-detect-cv25/src/CMakeFiles/object-detect.dir
+/home/giuseppe/Scrivania/lab_cv/object-detect-cv25/src/CMakeFiles/edit_cache.dir
+/home/giuseppe/Scrivania/lab_cv/object-detect-cv25/src/CMakeFiles/rebuild_cache.dir
