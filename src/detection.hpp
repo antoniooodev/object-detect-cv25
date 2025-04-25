@@ -10,6 +10,8 @@ public:
     // Function to detect keypoints using SIFT
     static std::vector<cv::KeyPoint> detectKeypoints(const cv::Mat &image);
 
+    static std::vector<cv::KeyPoint> detectKeypoints(const cv::Mat &image, const cv::Mat &mask);
+
     // Function to compute SIFT descriptors for the given keypoints
     static cv::Mat computeDescriptors(const cv::Mat &image, std::vector<cv::KeyPoint> &keypoints);
 };

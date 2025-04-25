@@ -9,6 +9,9 @@ add_executable(object-detect
     src/main.cpp 
     src/preprocessing.cpp
     src/detection.cpp
+    src/matching.cpp
+    src/dataloader.cpp
 )
 
 target_link_libraries(object-detect ${OpenCV_LIBS})
+
