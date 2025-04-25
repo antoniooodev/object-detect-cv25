@@ -64,46 +64,19 @@ int main()
 
             // Object detection threshold
             int matchesThreshold = 10;
-            bool objectPresence = false;
-            int maxGoodMatches = 0;
-            std::string bestModel;
+            std::string bestModel = "";
+            int maxGoodMatches;
 
-            // Match against every model view
-            for (size_t m = 0; m < modelDescriptors.size(); ++m) {
-                auto goodMatches = Matching::matchDescriptors(modelDescriptors[m], descTest);
-                std::cout << "    Model View: " << modelNames[m]
-                          << "  Good Matches: " << goodMatches.size() << std::endl;
+            // Use Matching class to detect object presence
+            bool objectPresence = Matching::findObject(modelDescriptors, modelNames, descTest, matchesThreshold, bestModel, maxGoodMatches);
 
-                // Track best model view with the most good matches
-                if (goodMatches.size() > maxGoodMatches) {
-                    maxGoodMatches = goodMatches.size();
-                    bestModel = modelNames [m];
-                }
-            }
-
-            // If the best view had more good matches than the threshold, consider the object found
-            if (maxGoodMatches > matchesThreshold) {
-                objectPresence = true;
+            // If the object is found, print and save the result
+            if (objectPresence) {
                 std::cout << "Object '" << key << "' detected in test image: " << ti.name
                           << " (Best model: " << bestModel
                           << " with " << maxGoodMatches << " matches)" << std::endl;
-
-            }
             
-            // TODO
-            // If object was found: draw matching box
-            if (objectPresence) {
-                cv::Mat outputImage;
-                cv::drawKeypoints(
-                    processedTestImage,
-                    kpTest,
-                    outputImage,
-                    cv::Scalar::all(-1),
-                    cv::DrawMatchesFlags::DRAW_RICH_KEYPOINTS
-                );
-
-                fs::path savePath = outDir / ("sift_" + ti.name);
-                cv::imwrite(savePath.string(), outputImage);
+              // TODO: Draw bounding box here
             }
         }
     }
