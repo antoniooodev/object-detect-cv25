@@ -7,9 +7,9 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(object-detect 
     src/main.cpp 
-    src/preprocessing.cpp
     src/detection.cpp
     src/matching.cpp
+    src/object_localizer.cpp
     src/dataloader.cpp
 )
 
