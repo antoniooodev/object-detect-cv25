@@ -53,10 +53,33 @@ bool Matching::findObject(
         // Track best model view with the most good matches
         if (goodMatches.size() > maxGoodMatches) {
             maxGoodMatches = goodMatches.size();
-            bestModel = modelNames[m];
         }
     }
 
         // If the best view had more good matches than the threshold, consider the object found
         return (maxGoodMatches > matchesThreshold);
+}
+
+std::vector<std::pair<int,std::vector<cv::DMatch>>> Matching::matchTopNModels(
+    const std::vector<cv::Mat>& modelDescriptors,
+    const cv::Mat& testDescriptors,
+    int N)
+{
+    std::vector<std::pair<int,std::vector<cv::DMatch>>> allMatches;
+    allMatches.reserve(modelDescriptors.size());
+    
+    for (int i = 0; i < static_cast<int>(modelDescriptors.size()); ++i) {
+        auto gm = matchDescriptors(modelDescriptors[i], testDescriptors);
+        allMatches.emplace_back(i, std::move(gm));
+    }
+    
+    std::sort(allMatches.begin(), allMatches.end(),
+        [](auto &a, auto &b) {
+            return a.second.size() > b.second.size();
+        });
+    
+    if (static_cast<int>(allMatches.size()) > N)
+        allMatches.resize(N);
+    
+    return allMatches;
 };

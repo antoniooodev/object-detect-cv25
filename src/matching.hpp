@@ -24,6 +24,12 @@ public:
         int matchesThreshold,
         std::string& bestModel,
         int& maxGoodMatches);
+
+    // return top-N model matches sorted by descending match count
+    static std::vector<std::pair<int,std::vector<cv::DMatch>>> matchTopNModels(
+        const std::vector<cv::Mat>& modelDescriptors,
+        const cv::Mat& testDescriptors,
+        int N);
 };
 
 #endif // MATCHING_HPP
