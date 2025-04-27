@@ -6,6 +6,7 @@
 using Path      = std::filesystem::path;
 using DirIter   = std::filesystem::directory_iterator;
 
+// Verify the root directory exists and contains required object subdirectories
 IntegrityCode FileSystemDataLoader::checkIntegrity(const Path &root) const {
     if (!std::filesystem::exists(root) || !std::filesystem::is_directory(root)) {
         return IntegrityCode::InvalidRoot;
@@ -24,7 +25,7 @@ IntegrityCode FileSystemDataLoader::checkIntegrity(const Path &root) const {
     }
     return IntegrityCode::OK;
 }
-
+// Return the list of object directory names in the root path
 std::vector<std::string> FileSystemDataLoader::listObjectKeys(const Path &root) const {
     std::vector<std::string> keys;
     for (auto &entry : DirIter(root)) {
@@ -34,7 +35,7 @@ std::vector<std::string> FileSystemDataLoader::listObjectKeys(const Path &root) 
     }
     return keys;
 }
-
+// Load all color images and binary masks for each model view of the specified object
 std::vector<ModelView>
 FileSystemDataLoader::loadModelViews(const Path &root, const std::string &objectKey) const {
     std::vector<ModelView> views;
@@ -56,7 +57,7 @@ FileSystemDataLoader::loadModelViews(const Path &root, const std::string &object
     }
     return views;
 }
-
+// List all test image files for the specified object
 std::vector<TestImage>
 FileSystemDataLoader::listTestImages(const Path &root, const std::string &objectKey) const {
     std::vector<TestImage> files;
