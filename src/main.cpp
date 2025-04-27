@@ -1,82 +1,105 @@
+// main.cpp
 #include <opencv2/opencv.hpp>
 #include <filesystem>
-#include "preprocessing.hpp"
 #include "detection.hpp"
 #include "dataloader.hpp"
-#include "matching.hpp" 
+#include "matching.hpp"
+#include "object_localizer.hpp"
 
 namespace fs = std::filesystem;
 
-//namespace fs = std::__fs::filesystem;
-
 int main()
 {
+
+    // Define the root path to the dataset
     fs::path rootPath("../data/object_detection_dataset/");
 
+    // Initialize and verify the dataset structure
     FileSystemDataLoader loader;
-    auto code = loader.checkIntegrity(rootPath);
-    if (code != IntegrityCode::OK) {
-        std::cerr << "Dataset integrity error: " << static_cast<int>(code) << std::endl;
-        return static_cast<int>(code);
+    if (loader.checkIntegrity(rootPath) != IntegrityCode::OK) {
+        std::cerr << "Dataset integrity error\n";
+        return -1;
     }
-
+    // Loop over each object category (e.g., sugar_box, mustard_bottle, power_drill)
     for (const auto &key : loader.listObjectKeys(rootPath)) {
         std::cout << "Processing object: " << key << std::endl;
 
-        // per-object results folder
+        // Prepare an output directory for annotated results
         fs::path outDir = fs::path("../data/results") / key;
-        if (!fs::exists(outDir)) {
-            fs::create_directories(outDir);
-        }
+        fs::create_directories(outDir);
 
-        // 1) Extract & store all model‐view descriptors
+        // Load model views for this object
         auto modelViews = loader.loadModelViews(rootPath, key);
-        std::vector<cv::Mat> modelDescriptors;
+        std::vector<cv::Mat>   modelDescriptors;
         std::vector<std::string> modelNames;
-        for (const auto &mv : modelViews) {
-            cv::Mat grayModel;
-            cv::cvtColor(mv.color, grayModel, cv::COLOR_BGR2GRAY);
-            auto kpModel = Detection::detectKeypoints(grayModel, mv.mask);
-            auto descModel = Detection::computeDescriptors(grayModel, kpModel);
-            modelDescriptors.push_back(descModel);
+        for (auto &mv : modelViews) {
+            cv::Mat gray;
+            // detect keypoints, compute descriptors
+            cv::cvtColor(mv.color, gray, cv::COLOR_BGR2GRAY);
+            auto kp   = Detection::detectKeypoints(gray, mv.mask);
+            auto desc = Detection::computeDescriptors(gray, kp);
+            modelDescriptors.push_back(desc);
             modelNames.push_back(mv.name);
-            std::cout << "  Model view '" << mv.name << "' keypoints: " << kpModel.size() << std::endl;
         }
 
-
-        // 2) Test images (no masks)
-        auto testImages = loader.listTestImages(rootPath, key);
-        for (const auto &ti : testImages) {
-            cv::Mat timg = cv::imread(ti.path.string());
-            if (timg.empty()) {
-                std::cerr << "  Failed to read image: " << ti.name << std::endl;
+        // process each test image
+        for (auto &ti : loader.listTestImages(rootPath, key)) {
+            cv::Mat img = cv::imread(ti.path.string());
+            if (img.empty()) {
+                std::cerr << "  Failed to read " << ti.name << "\n";
                 continue;
             }
 
-            cv::Mat graytimg;
-            cv::cvtColor(timg, graytimg, cv::COLOR_BGR2GRAY);
-            cv::Mat processedTestImage = Preprocessing::reduceNoise(graytimg);
+            // detect keypoints & descriptors on test image
+            cv::Mat gray;
+            cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
+            auto kpTest   = Detection::detectKeypoints(gray);
+            auto descTest = Detection::computeDescriptors(gray, kpTest);
 
-            auto kpTest   = Detection::detectKeypoints(processedTestImage);
-            auto descTest = Detection::computeDescriptors(processedTestImage, kpTest);
-            // Output the results
-            std::cout << "  Test image: " << ti.name << " - Keypoints: " << kpTest.size() << std::endl;
+            // determine if object is present using matchesThreshold
+            const int matchesThreshold = 8;
+            std::string bestModel;
+            int maxGoodMatches = 0;
+            bool objectPresent = Matching::findObject(
+                modelDescriptors,
+                modelNames,
+                descTest,
+                matchesThreshold,
+                bestModel,
+                maxGoodMatches
+            );
+            if (!objectPresent) {
+                std::cout << "  Object not detected in " << ti.name << "\n";
+                continue;
+            }
 
-            // Object detection threshold
-            int matchesThreshold = 10;
-            std::string bestModel = "";
-            int maxGoodMatches;
+            // fetch top-N view matches
+            const int N = 4;
+            auto topMatches = Matching::matchTopNModels(modelDescriptors, descTest, N);
 
-            // Use Matching class to detect object presence
-            bool objectPresence = Matching::findObject(modelDescriptors, modelNames, descTest, matchesThreshold, bestModel, maxGoodMatches);
+            // fuse all matched test points from top-N views
+            std::vector<cv::Point2f> fusedPts;
+            for (auto &mp : topMatches) {
+                int idx = mp.first;
+                auto &gm = mp.second;
 
-            // If the object is found, print and save the result
-            if (objectPresence) {
-                std::cout << "Object '" << key << "' detected in test image: " << ti.name
-                          << " (Best model: " << bestModel
-                          << " with " << maxGoodMatches << " matches)" << std::endl;
-            
-              // TODO: Draw bounding box here
+                cv::Mat grayM;
+                cv::cvtColor(modelViews[idx].color, grayM, cv::COLOR_BGR2GRAY);
+                auto kpModel = Detection::detectKeypoints(grayM, modelViews[idx].mask);
+
+                auto ptsT = ObjectLocalizer::extractDetectedPoints(kpModel, kpTest, gm);
+                fusedPts.insert(fusedPts.end(), ptsT.begin(), ptsT.end());
+            }
+
+            // cluster and draw oriented box
+            if (!fusedPts.empty()) {
+                auto clusterPts = ObjectLocalizer::clusterMeanShift(fusedPts);
+                if (!clusterPts.empty()) {
+                    ObjectLocalizer::drawBox(img, clusterPts);
+                    fs::path savePath = outDir / ("detected_" + ti.name);
+                    cv::imwrite(savePath.string(), img);
+                    std::cout << "  -> saved with oriented box\n";
+                }
             }
         }
     }
