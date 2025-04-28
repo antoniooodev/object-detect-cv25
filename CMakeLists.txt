@@ -3,7 +3,8 @@ project(object-detect-cv25)
 
 find_package(OpenCV REQUIRED)
 
-include_directories(${OpenCV_INCLUDE_DIRS})
+# Add your own include/ folder
+include_directories(include ${OpenCV_INCLUDE_DIRS})
 
 add_executable(object-detect 
     src/main.cpp 
@@ -15,4 +16,3 @@ add_executable(object-detect
 )
 
 target_link_libraries(object-detect ${OpenCV_LIBS})
-
