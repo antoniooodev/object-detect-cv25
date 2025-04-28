@@ -1,3 +1,5 @@
+//author: Paolo Conti
+
 #include "matching.hpp"
 
 std::vector<cv::DMatch> Matching::matchDescriptors(
@@ -58,6 +60,7 @@ bool Matching::findObject(
         return (maxGoodMatches > matchesThreshold);
 }
 
+// Keep the top N-models after comparing all models with the current test image
 std::vector<std::pair<int,std::vector<cv::DMatch>>> Matching::matchTopNModels(
     const std::vector<cv::Mat>& modelDescriptors,
     const cv::Mat& testDescriptors,

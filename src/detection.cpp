@@ -1,3 +1,5 @@
+//author: Antonio Tangaro
+
 #include "detection.hpp"
 
 std::vector<cv::KeyPoint> Detection::detectKeypoints(const cv::Mat &image)

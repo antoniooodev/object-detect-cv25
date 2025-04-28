@@ -1,4 +1,5 @@
-// object_localizer.cpp
+//author: Giuseppe D'Auria
+
 #include "object_localizer.hpp"
 #include <iostream>
 
@@ -19,12 +20,8 @@ std::vector<cv::Point2f> ObjectLocalizer::extractDetectedPoints(
     }
     return ptsTest;
 }
-// Performs mean-shift clustering on the input 2D points.
-// Returns the points belonging to the largest-density cluster.
-// Parameters:
-//   bandwidth – radius within which neighbors influence shift
-//   eps       – convergence threshold for mode updates
-//   maxIter   – maximum iterations per point
+// Performs mean-shift clustering on the input points and returns the points belonging to the largest-density cluster
+// Parameters: bandwidth (radius for neighbour influence), eps (threshold for convergence), maxIter (maximum iterations per pt)
 std::vector<cv::Point2f> ObjectLocalizer::clusterMeanShift(
     const std::vector<cv::Point2f>& points,
     float bandwidth,

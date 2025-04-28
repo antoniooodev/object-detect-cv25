@@ -1,3 +1,5 @@
+//author: Paolo Conti
+
 #include "utils.hpp"
 #include <fstream>
 #include <sstream>
@@ -16,7 +18,8 @@ std::vector<Box> Utils::loadGroundTruthBoxes(const std::string& filename) {
         Box box;
         int xmin, ymin, xmax, ymax;
         if (!(iss >> box.label >> xmin >> ymin >> xmax >> ymax)) {
-            continue; // skip invalid lines
+            //skip invalid lines
+            continue;
         }
         box.bbox = cv::Rect(cv::Point(xmin, ymin), cv::Point(xmax, ymax));
         boxes.push_back(box);

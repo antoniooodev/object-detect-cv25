@@ -1,4 +1,4 @@
-//dataloader.cpp
+//author: Giuseppe D'Auria
 
 #include "dataloader.hpp"
 #include <iostream>
@@ -25,6 +25,7 @@ IntegrityCode FileSystemDataLoader::checkIntegrity(const Path &root) const {
     }
     return IntegrityCode::OK;
 }
+
 // Return the list of object directory names in the root path
 std::vector<std::string> FileSystemDataLoader::listObjectKeys(const Path &root) const {
     std::vector<std::string> keys;
@@ -35,12 +36,14 @@ std::vector<std::string> FileSystemDataLoader::listObjectKeys(const Path &root) 
     }
     return keys;
 }
+
 // Load all color images and binary masks for each model view of the specified object
 std::vector<ModelView>
 FileSystemDataLoader::loadModelViews(const Path &root, const std::string &objectKey) const {
     std::vector<ModelView> views;
     Path modelsDir = root / objectKey / "models";
 
+    // Loop through models
     for (auto &entry : DirIter(modelsDir)) {
         std::string fname = entry.path().filename().string();
         auto pos = fname.find("_color");
@@ -48,6 +51,7 @@ FileSystemDataLoader::loadModelViews(const Path &root, const std::string &object
         std::string base = fname.substr(0, pos);
         std::string ext  = entry.path().extension().string();
 
+        // Read model img
         ModelView mv;
         mv.name = base;
         mv.color = cv::imread((modelsDir / (base + "_color" + ext)).string(), cv::IMREAD_COLOR);
@@ -57,10 +61,12 @@ FileSystemDataLoader::loadModelViews(const Path &root, const std::string &object
     }
     return views;
 }
+
 // List all test image files for the specified object
 std::vector<TestImage>
 FileSystemDataLoader::listTestImages(const Path &root, const std::string &objectKey) const {
     std::vector<TestImage> files;
+    // Get correct path
     Path testDir = root / objectKey / "test_images";
     for (auto &entry : DirIter(testDir)) {
         if (!entry.is_regular_file()) continue;

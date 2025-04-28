@@ -1,4 +1,5 @@
-// main.cpp
+//author: Giuseppe D'Auria, Paolo Conti, Antonio Tangaro
+
 #include <opencv2/opencv.hpp>
 #include <filesystem>
 #include "detection.hpp"
@@ -27,7 +28,7 @@ int main()
         return -1;
     }
 
-    // specify per-object match thresholds
+    // Specify per-object match thresholds
     std::map<std::string,int> thresholds = {
         {"004_sugar_box",       20},
         {"006_mustard_bottle",   12},
@@ -39,7 +40,7 @@ int main()
     std::map<std::string, float> iouSums;
     std::map<std::string, int> iouCounts;
 
-    // 1) load all object models & descriptors
+    // Load all object models & descriptors
     auto keys = loader.listObjectKeys(rootPath);
     struct ObjData {
         std::string key;
@@ -60,7 +61,7 @@ int main()
         allObjects.push_back(std::move(od));
     }
 
-    // 2) process each test set
+    // Process each test set
     for (auto &key : keys) {
         std::cout << "Processing test images in: " << key << std::endl;
         fs::path outDir = fs::path("../data/results/") / key;
@@ -118,7 +119,7 @@ int main()
                     fusedPts.insert(fusedPts.end(), ptsT.begin(), ptsT.end());
                 }
 
-                // Cluster & draw oriented box
+                // Cluster and draw oriented box
                 if (!fusedPts.empty()) {
                     auto clusterPts = ObjectLocalizer::clusterMeanShift(fusedPts);
                     if (!clusterPts.empty()) {
@@ -137,8 +138,6 @@ int main()
             cv::imwrite(savePath.string(), img);
             std::cout << "  -> saved " << ti.name << "\n";
 
-            // === Evaluation section ===
-
             // Load ground truth boxes
             std::string gtFile = ti.path.string();
 
@@ -146,19 +145,24 @@ int main()
             std::filesystem::path gtPath = std::filesystem::path(gtFile).parent_path().parent_path() / "labels";
 
             // Extract the filename without the extension and remove the "-color" part
-            std::string filename = gtFile.substr(gtFile.find_last_of('/') + 1);  // Get filename
-            size_t dotPos = filename.find_last_of('.');  // Find the last dot (before extension)
+            // Get filename
+            std::string filename = gtFile.substr(gtFile.find_last_of('/') + 1);
+            // Find the last dot (before extension)
+            size_t dotPos = filename.find_last_of('.');
             if (dotPos != std::string::npos) {
-                filename = filename.substr(0, dotPos);  // Remove the extension
+                // Remove the extension
+                filename = filename.substr(0, dotPos);
             }
 
             // Remove the "-color" part if it exists
             size_t colorPos = filename.find("-color");
             if (colorPos != std::string::npos) {
-                filename.erase(colorPos, 6);  // Erase the "-color" part (6 characters)
+                // Erase the "-color" part (6 characters
+                filename.erase(colorPos, 6);
             }
-
-            gtPath /= filename + "-box.txt";  // Add "-box.txt" to the base filename
+            
+            // Add "-box.txt" to the base filename
+            gtPath /= filename + "-box.txt";
 
             auto gtBoxes = Utils::loadGroundTruthBoxes(gtPath);
 
@@ -188,7 +192,7 @@ int main()
         }
     }
 
-    // === Print evaluation results ===
+    // Print evaluation results (mIoU and true positives found)
     std::cout << "\n=== Detection Results ===\n";
     for (const auto &[label, total] : totalGroundTruths) {
         int tp = truePositives[label];
