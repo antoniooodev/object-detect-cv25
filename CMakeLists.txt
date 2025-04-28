@@ -28,6 +28,5 @@ add_executable(object-detect
 
 target_link_libraries(object-detect ${OpenCV_LIBS})
 
-if(USE_BOOST_FILESYSTEM)
-    target_link_libraries(object-detect Boost::filesystem Boost::system)
-endif()
+enable_testing()
+add_subdirectory(tests)
