@@ -15,6 +15,21 @@ public:
         const cv::Mat& modelDescriptors,
         const cv::Mat& testDescriptors,
         float nndrRatio = 0.75f);
+
+    // Static function to match against model views and return the detection result
+    static bool findObject(
+        const std::vector<cv::Mat>& modelDescriptors,
+        const std::vector<std::string>& modelNames,
+        const cv::Mat& testDescriptors,
+        int matchesThreshold,
+        std::string& bestModel,
+        int& maxGoodMatches);
+
+    // return top-N model matches sorted by descending match count
+    static std::vector<std::pair<int,std::vector<cv::DMatch>>> matchTopNModels(
+        const std::vector<cv::Mat>& modelDescriptors,
+        const cv::Mat& testDescriptors,
+        int N);
 };
 
 #endif // MATCHING_HPP
