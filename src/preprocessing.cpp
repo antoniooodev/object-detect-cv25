@@ -34,10 +34,8 @@ cv::Mat Preprocessing::preprocessImage(const cv::Mat &img)
 // Reduce noise using bilateral filter
 cv::Mat Preprocessing::reduceNoise(const cv::Mat &img)
 {
-    cv::Mat denoised;
-
-    // Apply bilateral filter to reduce noise while preserving edges
-    cv::bilateralFilter(img, denoised, 9, 75, 75);
-
-    return denoised;
+    cv::Mat result;
+    // Apply a bilateral filter to reduce noise while preserving edges
+    cv::bilateralFilter(img, result, 9, 75, 75);
+    return result;
 }

@@ -18,7 +18,6 @@ public:
 
     // Reduce noise using bilateral filter
     static cv::Mat reduceNoise(const cv::Mat &img);
-
 };
 
-#endif
+#endif // PREPROCESSING_HPP
