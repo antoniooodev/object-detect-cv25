@@ -7,13 +7,15 @@
 class Detection
 {
 public:
-    // Function to detect keypoints using SIFT
-    static std::vector<cv::KeyPoint> detectKeypoints(const cv::Mat &image);
+    // Detect keypoints (with or without mask)
+    static std::vector<cv::KeyPoint> detectKeypoints(
+        const cv::Mat &image,
+        const cv::Mat &mask = cv::Mat());
 
-    static std::vector<cv::KeyPoint> detectKeypoints(const cv::Mat &image, const cv::Mat &mask);
-
-    // Function to compute SIFT descriptors for the given keypoints
-    static cv::Mat computeDescriptors(const cv::Mat &image, std::vector<cv::KeyPoint> &keypoints);
+    // Compute SIFT descriptors
+    static cv::Mat computeDescriptors(
+        const cv::Mat &image,
+        std::vector<cv::KeyPoint> &keypoints);
 };
 
-#endif
+#endif // DETECTION_HPP
