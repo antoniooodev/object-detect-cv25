@@ -19,10 +19,6 @@ public:
     // Reduce noise using bilateral filter
     static cv::Mat reduceNoise(const cv::Mat &img);
 
-private:
-    // Apply Sobel filter for edge detection
-    static cv::Mat applySobel(const cv::Mat &img);
-
 };
 
 #endif
