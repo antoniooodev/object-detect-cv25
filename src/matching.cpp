@@ -47,8 +47,6 @@ bool Matching::findObject(
     // Match against every model view
     for (int m = 0; m < modelDescriptors.size(); m++) {
         auto goodMatches = Matching::matchDescriptors(modelDescriptors[m], testDescriptors);
-        std::cout << "    Model View: " << modelNames[m]
-                  << "  Good Matches: " << goodMatches.size() << std::endl;
 
         // Track best model view with the most good matches
         if (goodMatches.size() > maxGoodMatches) {

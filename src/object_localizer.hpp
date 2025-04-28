@@ -21,10 +21,9 @@ public:
         int maxIter = 100);    
 
     // draw minimum-area bounding box over points
-    static void drawBox(
-        cv::Mat& image,
+    cv::RotatedRect drawBox(cv::Mat& image,
         const std::vector<cv::Point2f>& points,
-        const cv::Scalar& color = cv::Scalar(0, 255, 0),
+        const cv::Scalar& color,
         int thickness = 2);
 };
 

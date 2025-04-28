@@ -11,6 +11,7 @@ add_executable(object-detect
     src/matching.cpp
     src/object_localizer.cpp
     src/dataloader.cpp
+    src/utils.cpp
 )
 
 target_link_libraries(object-detect ${OpenCV_LIBS})

@@ -84,20 +84,19 @@ std::vector<cv::Point2f> ObjectLocalizer::clusterMeanShift(
 }
 
 // Computes the minimum-area rotated rectangle over the given points and draws its four edges onto 'image'.
-void ObjectLocalizer::drawBox(
-    cv::Mat& image,
+cv::RotatedRect ObjectLocalizer::drawBox(cv::Mat& image,
     const std::vector<cv::Point2f>& points,
     const cv::Scalar& color,
     int thickness)
 {
-    if (points.size() < 2)
-        return;
-    // compute the minimum-area rotated rectangle
-    cv::RotatedRect rbox = cv::minAreaRect(points);
-    cv::Point2f corners[4];
-    rbox.points(corners);
-    // draw its four edges
-    for (int i = 0; i < 4; ++i) {
-        cv::line(image, corners[i], corners[(i + 1) % 4], color, thickness);
-    }
+if (points.size() < 2)
+    return cv::RotatedRect();
+
+cv::RotatedRect rbox = cv::minAreaRect(points);
+cv::Point2f corners[4];
+rbox.points(corners);
+for (int i = 0; i < 4; ++i) {
+    cv::line(image, corners[i], corners[(i + 1) % 4], color, thickness);
+}
+return rbox;
 }

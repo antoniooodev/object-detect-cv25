@@ -1,10 +1,11 @@
-// m// main.cpp
+// main.cpp
 #include <opencv2/opencv.hpp>
 #include <filesystem>
 #include "detection.hpp"
 #include "dataloader.hpp"
 #include "matching.hpp"
 #include "object_localizer.hpp"
+#include "utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -28,12 +29,17 @@ int main()
 
     // specify per-object match thresholds
     std::map<std::string,int> thresholds = {
-        {"004_sugar_box",       20},  // sugar box needs 10 matches
-        {"006_mustard_bottle",   12},  // mustard bottle needs 8 matches
-        {"035_power_drill",     9}   // power drill needs 12 matches
+        {"004_sugar_box",       20},
+        {"006_mustard_bottle",   12},
+        {"035_power_drill",      9}
     };
 
-    // 1) load all object models & descriptors up front
+    // Counters for evaluation
+    std::map<std::string, int> truePositives, totalGroundTruths;
+    std::map<std::string, float> iouSums;
+    std::map<std::string, int> iouCounts;
+
+    // 1) load all object models & descriptors
     auto keys = loader.listObjectKeys(rootPath);
     struct ObjData {
         std::string key;
@@ -54,7 +60,7 @@ int main()
         allObjects.push_back(std::move(od));
     }
 
-    // 2) for each test‐set directory
+    // 2) process each test set
     for (auto &key : keys) {
         std::cout << "Processing test images in: " << key << std::endl;
         fs::path outDir = fs::path("../data/results/") / key;
@@ -68,18 +74,19 @@ int main()
                 continue;
             }
 
-            // detect on test image once
+            // Detect on test image
             cv::Mat gray;
             cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
             auto kpTest   = Detection::detectKeypoints(gray);
             auto descTest = Detection::computeDescriptors(gray, kpTest);
 
-            // try detecting each object
+            // Store predicted boxes
+            std::vector<Box> predictedBoxes;
+
+            // Try detecting each object
             for (auto &obj : allObjects) {
-                // use object-specific threshold
                 int matchesThreshold = thresholds[obj.key];
 
-                // quick presence check
                 std::string modelName;
                 int modelCount;
                 bool present = Matching::findObject(
@@ -93,11 +100,11 @@ int main()
                 if (!present)
                     continue;
 
-                // fuse top‐N matches
+                // Fuse top‐N matches
                 const int N = 3;
                 auto topMatches = Matching::matchTopNModels(obj.descriptors, descTest, N);
 
-                // collect matched points
+                // Collect matched points
                 std::vector<cv::Point2f> fusedPts;
                 for (auto &mp : topMatches) {
                     int idx = mp.first;
@@ -111,20 +118,84 @@ int main()
                     fusedPts.insert(fusedPts.end(), ptsT.begin(), ptsT.end());
                 }
 
-                // cluster & draw oriented box in object color
+                // Cluster & draw oriented box
                 if (!fusedPts.empty()) {
                     auto clusterPts = ObjectLocalizer::clusterMeanShift(fusedPts);
                     if (!clusterPts.empty()) {
-                        ObjectLocalizer::drawBox(img, clusterPts, boxColor(obj.key));
+                        ObjectLocalizer localizer;
+                        auto rbox = localizer.drawBox(img, clusterPts, boxColor(obj.key));
+                        if (rbox.size.width > 0 && rbox.size.height > 0) {
+                            cv::Rect bbox = rbox.boundingRect() & cv::Rect(0, 0, img.cols, img.rows);
+                            predictedBoxes.push_back({obj.key, bbox});
+                        }
                     }
                 }
             }
 
-            // save annotated image
+            // Save annotated image
             fs::path savePath = outDir / ("detected_" + ti.name);
             cv::imwrite(savePath.string(), img);
             std::cout << "  -> saved " << ti.name << "\n";
+
+            // === Evaluation section ===
+
+            // Load ground truth boxes
+            std::string gtFile = ti.path.string();
+
+            // Go up two levels and add 'labels' folder
+            std::filesystem::path gtPath = std::filesystem::path(gtFile).parent_path().parent_path() / "labels";
+
+            // Extract the filename without the extension and remove the "-color" part
+            std::string filename = gtFile.substr(gtFile.find_last_of('/') + 1);  // Get filename
+            size_t dotPos = filename.find_last_of('.');  // Find the last dot (before extension)
+            if (dotPos != std::string::npos) {
+                filename = filename.substr(0, dotPos);  // Remove the extension
+            }
+
+            // Remove the "-color" part if it exists
+            size_t colorPos = filename.find("-color");
+            if (colorPos != std::string::npos) {
+                filename.erase(colorPos, 6);  // Erase the "-color" part (6 characters)
+            }
+
+            gtPath /= filename + "-box.txt";  // Add "-box.txt" to the base filename
+
+            auto gtBoxes = Utils::loadGroundTruthBoxes(gtPath);
+
+
+
+            // Count total ground truths
+            for (const auto &gt : gtBoxes) {
+                totalGroundTruths[gt.label]++;
+            }
+
+            // Match predictions to ground truth
+            for (const auto &gt : gtBoxes) {
+                float bestIoU = 0.0f;
+                for (const auto &pred : predictedBoxes) {
+                    if (pred.label == gt.label) {
+                        float iou = Utils::computeIoU(pred.bbox, gt.bbox);
+                        if (iou > bestIoU)
+                            bestIoU = iou;
+                    }
+                }
+                if (bestIoU > 0.5f)
+                    truePositives[gt.label]++;
+
+                iouSums[gt.label] += bestIoU;
+                iouCounts[gt.label]++;
+            }
         }
+    }
+
+    // === Print evaluation results ===
+    std::cout << "\n=== Detection Results ===\n";
+    for (const auto &[label, total] : totalGroundTruths) {
+        int tp = truePositives[label];
+        float miou = (iouCounts[label] > 0) ? (iouSums[label] / iouCounts[label]) : 0.0f;
+        std::cout << "Object: " << label << "\n";
+        std::cout << "  True Positives: " << tp << " / " << total << "\n";
+        std::cout << "  Mean IoU: " << miou << "\n";
     }
 
     return 0;
