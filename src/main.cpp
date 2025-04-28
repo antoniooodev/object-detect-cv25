@@ -5,6 +5,7 @@
 #include "dataloader.hpp"
 #include "matching.hpp"
 #include "object_localizer.hpp"
+#include "utils.hpp"
 
 namespace fs = std::filesystem;
 
@@ -41,8 +42,11 @@ int main()
             modelDescriptors.push_back(desc);
             modelNames.push_back(mv.name);
         }
+        
+        // List to store predictions
+        std::vector<Prediction> predictions;
 
-        // process each test image
+        // Process each test image
         for (auto &ti : loader.listTestImages(rootPath, key)) {
             cv::Mat img = cv::imread(ti.path.string());
             if (img.empty()) {
@@ -95,6 +99,19 @@ int main()
             if (!fusedPts.empty()) {
                 auto clusterPts = ObjectLocalizer::clusterMeanShift(fusedPts);
                 if (!clusterPts.empty()) {
+                    // Compute rotated rectangle
+                    cv::RotatedRect rbox = cv::minAreaRect(clusterPts);
+
+                    // Convert to upright bounding box
+                    cv::Rect bbox = rbox.boundingRect();
+
+                    // Save prediction
+                    Prediction pred;
+                    pred.objectName = key;
+                    pred.bbox = bbox;
+                    predictions.push_back(pred);
+
+                    // Draw box on the image
                     ObjectLocalizer::drawBox(img, clusterPts);
                     fs::path savePath = outDir / ("detected_" + ti.name);
                     cv::imwrite(savePath.string(), img);
@@ -102,6 +119,11 @@ int main()
                 }
             }
         }
+
+        // Evaluate performance for this object
+        std::vector<GroundTruth> groundTruths = loadAllGroundTruths(rootPath, key);
+        evaluatePerformance(predictions, groundTruths, key);
+
     }
 
     return 0;
